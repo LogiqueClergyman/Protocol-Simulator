@@ -1,0 +1,22 @@
+#[derive(Clone)]
+pub struct ProtocolState {
+    pub reward_per_block: f64,
+    pub min_stake_required: f64,
+    pub operating_cost_per_block: f64,
+    pub slashing_probability: f64,
+    pub slashing_penalty: f64,
+    pub current_block: u64,
+}
+
+#[derive(Clone)]
+pub struct Validator {
+    pub id: u64,
+    pub stake: f64,
+    pub balance: f64,
+    pub active: bool,
+}
+
+pub struct ValidatorWorld {
+    pub protocol: ProtocolState,
+    pub validators: Vec<Validator>,
+}
