@@ -4,7 +4,9 @@ pub struct MetricsRecorder<R> {
 
 impl<R> MetricsRecorder<R> {
     pub fn new() -> Self {
-        Self { records: Vec::new() }
+        Self {
+            records: Vec::new(),
+        }
     }
 
     pub fn push(&mut self, record: R) {

@@ -1,41 +1,25 @@
-mod engine;
+mod config;
 mod domain;
+mod engine;
 mod metrics;
+use std::fs;
+
+use config::validator::ValidatorScenarioConfig;
+use domain::validator::metrics::ValidatorMetricsCollector;
 use engine::engine::SimulationEngine;
-use domain::validator::{
-    domain::ValidatorDomain,
-    state::{ProtocolState, Validator},
-    metrics::ValidatorMetricsCollector,
-};
 
 fn main() {
-    let protocol = ProtocolState {
-        reward_per_block: 100.0,
-        min_stake_required: 1000.0,
-        operating_cost_per_block: 1.0,
-        slashing_probability: 0.0001,
-        slashing_penalty: 500.0,
-        current_block: 0,
-    };
+    let raw = fs::read_to_string("configs/validator_basic.json").expect("failed to read config");
 
-    let validators = (0..100)
-        .map(|i| Validator {
-            id: i,
-            stake: 1200.0,
-            balance: 0.0,
-            active: true,
-        })
-        .collect();
+    let scenario: ValidatorScenarioConfig = serde_json::from_str(&raw).expect("invalid config");
 
-    let domain = ValidatorDomain {
-        protocol,
-        initial_validators: validators,
-    };
+    let max_ticks = scenario.simulation.max_ticks;
+    let domain = scenario.into_domain();
 
     let engine = SimulationEngine {
         domain,
         metrics: ValidatorMetricsCollector,
-        max_ticks: 100_000,
+        max_ticks,
     };
 
     let results = engine.run();

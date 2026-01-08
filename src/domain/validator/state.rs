@@ -2,7 +2,6 @@
 pub struct ProtocolState {
     pub reward_per_block: f64,
     pub min_stake_required: f64,
-    pub operating_cost_per_block: f64,
     pub slashing_probability: f64,
     pub slashing_penalty: f64,
     pub current_block: u64,
@@ -14,6 +13,9 @@ pub struct Validator {
     pub stake: f64,
     pub balance: f64,
     pub active: bool,
+    pub operating_cost_per_block: f64,
+    pub risk_aversion: f64,
+    pub cooldown_blocks_remaining: u64,
 }
 
 pub struct ValidatorWorld {
