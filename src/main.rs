@@ -24,5 +24,10 @@ fn main() {
 
     let results = engine.run();
     println!("Simulation finished with {} records", results.records.len());
-    println!("{:?}", results.records.last());
+    println!("active validators: {}", results.records.last().unwrap().active_validators);
+    println!("total staked: {}", results.records.last().unwrap().total_staked);
+    println!("average balance: {}", results.records.last().unwrap().average_balance);
+    println!("nakamoto coefficient 33: {}", results.records.last().unwrap().nakamoto_coefficient_33);
+    println!("nakamoto coefficient 50: {}", results.records.last().unwrap().nakamoto_coefficient_50);
+    println!("top validator stakes: {:?}", &results.records.last().unwrap().stakes[0..5]);
 }

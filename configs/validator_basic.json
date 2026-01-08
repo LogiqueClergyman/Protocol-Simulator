@@ -1,12 +1,12 @@
 {
   "simulation": {
-    "max_ticks": 100000
+    "max_ticks": 1453125
   },
   "protocol": {
     "reward_per_block": 100.0,
     "min_stake_required": 1000.0,
     "slashing_probability": 0.0001,
-    "slashing_penalty": 500.0
+    "slashing_fraction": 0.01
   },
   "validators": {
     "count": 100,

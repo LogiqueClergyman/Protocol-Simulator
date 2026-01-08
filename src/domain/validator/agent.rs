@@ -14,8 +14,10 @@ impl Validator {
 
         let reward = protocol.reward_per_block * (self.stake / total_active_stake);
 
-        let expected_slashing_cost =
-            protocol.slashing_probability * protocol.slashing_penalty * self.risk_aversion;
+        let expected_slashing_cost = protocol.slashing_probability
+            * protocol.slashing_fraction
+            * self.stake
+            * self.risk_aversion;
 
         let risk_adjusted_profit = reward - self.operating_cost_per_block - expected_slashing_cost;
 
