@@ -1,6 +1,6 @@
 {
   "simulation": {
-    "max_ticks": 1453125
+    "max_ticks": 1000000
   },
   "protocol": {
     "reward_per_block": 100.0,

@@ -5,8 +5,11 @@ mod metrics;
 use std::fs;
 
 use config::validator::ValidatorScenarioConfig;
-use domain::validator::metrics::ValidatorMetricsCollector;
 use engine::engine::SimulationEngine;
+
+use crate::domain::validator::metrics::{
+    EveryNBlocks, GlobalMetricsCollector, StakeDistributionCollector, SurvivalMetricsCollector,
+};
 
 fn main() {
     let raw = fs::read_to_string("configs/validator_basic.json").expect("failed to read config");
@@ -18,16 +21,41 @@ fn main() {
 
     let engine = SimulationEngine {
         domain,
-        metrics: ValidatorMetricsCollector,
+        metrics: GlobalMetricsCollector,
+        listeners: vec![
+            Box::new(SurvivalMetricsCollector::new(2, 2)),
+            Box::new(StakeDistributionCollector::new(EveryNBlocks {
+                interval: 100000,
+            })),
+        ],
         max_ticks,
     };
-
-    let results = engine.run();
+    let (results, mut listeners) = engine.run();
     println!("Simulation finished with {} records", results.records.len());
-    println!("active validators: {}", results.records.last().unwrap().active_validators);
-    println!("total staked: {}", results.records.last().unwrap().total_staked);
-    println!("average balance: {}", results.records.last().unwrap().average_balance);
-    println!("nakamoto coefficient 33: {}", results.records.last().unwrap().nakamoto_coefficient_33);
-    println!("nakamoto coefficient 50: {}", results.records.last().unwrap().nakamoto_coefficient_50);
-    println!("top validator stakes: {:?}", &results.records.last().unwrap().stakes[0..5]);
+    println!(
+        "Total validator count: {}",
+        results.records.last().unwrap().active_validators
+    );
+    println!(
+        "Total active stake: {}",
+        results.records.last().unwrap().total_active_stake
+    );
+    println!("Total nc33: {}", results.records.last().unwrap().nc33);
+    println!("Total nc50: {}", results.records.last().unwrap().nc50);
+    println!(
+        "Survival metrics: {:#?}",
+        listeners[0]
+            .as_any_mut()
+            .downcast_mut::<SurvivalMetricsCollector>()
+            .unwrap()
+            .outcome
+    );
+    println!(
+        "Stake distribution: {:#?}",
+        listeners[1]
+            .as_any_mut()
+            .downcast_mut::<StakeDistributionCollector<EveryNBlocks>>()
+            .unwrap()
+            .records.last()
+    );
 }
