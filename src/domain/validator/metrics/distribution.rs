@@ -59,6 +59,10 @@ where
             gini,
         })
     }
+
+    pub fn get_records(&self) -> &Vec<StakeDistributionSnapshot> {
+        &self.records
+    }
 }
 
 fn compute_gini(mut values: Vec<f64>) -> f64 {

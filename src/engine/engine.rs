@@ -4,39 +4,35 @@ use crate::metrics::{
     traits::{Metrics, TickListener},
 };
 
-pub struct SimulationEngine<D, M>
+pub struct SimulationEngine<D, M, L>
 where
     D: Domain,
     M: Metrics<State = D::State>,
 {
     pub domain: D,
     pub metrics: M,
-    pub listeners: Vec<Box<dyn TickListener<D::State, M::Record>>>,
+    pub listeners: L,
     pub max_ticks: u64,
 }
 
-impl<D, M> SimulationEngine<D, M>
+impl<D, M, L> SimulationEngine<D, M, L>
 where
     D: Domain,
-    D: 'static,
+    D::State: 'static,
     M: Metrics<State = D::State>,
     M::Record: 'static,
+    L: TickListener<D::State, M::Record>,
 {
-    pub fn run(
-        mut self,
-    ) -> (
-        MetricsRecorder<M::Record>,
-        Vec<Box<dyn TickListener<D::State, M::Record>>>,
-    ) {
+    pub fn run(mut self) -> (MetricsRecorder<M::Record>, L) {
         let mut state = self.domain.init_state();
         let mut recorder = MetricsRecorder::new();
 
         for _ in 0..self.max_ticks {
             self.domain.tick(&mut state);
             let global = self.metrics.record(&state);
-            for listener in self.listeners.iter_mut() {
-                listener.on_tick(&state, &global);
-            }
+
+            self.listeners.on_tick(&state, &global);
+
             recorder.push(global);
         }
 

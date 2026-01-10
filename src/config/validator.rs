@@ -1,3 +1,4 @@
+use crate::config::root::{ListenersConfig, MetricsConfig};
 use crate::domain::validator::{
     domain::ValidatorDomain,
     state::{ProtocolState, Validator},
@@ -9,6 +10,8 @@ pub struct ValidatorScenarioConfig {
     pub simulation: SimulationConfig,
     pub protocol: ProtocolConfig,
     pub validators: ValidatorConfig,
+    pub metrics: MetricsConfig,
+    pub listeners: ListenersConfig,
 }
 
 #[derive(Debug, Deserialize)]
