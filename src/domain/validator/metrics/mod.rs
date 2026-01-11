@@ -6,4 +6,4 @@ pub mod survival;
 
 pub use global::GlobalMetricsCollector;
 pub use listeners::ValidatorListeners;
-pub use sampling::EveryNBlocks;
+pub use sampling::{EveryNBlocks, OnEvent};

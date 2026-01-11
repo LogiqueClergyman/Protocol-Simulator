@@ -1,7 +1,14 @@
+use serde::Deserialize;
+
 use crate::{
     domain::validator::{metrics::global::ValidatorGlobalMetrics, state::ValidatorWorld},
     metrics::traits::{MetricsObserver, TickListener},
 };
+use std::{
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
+
 #[derive(Debug)]
 pub struct SimulationOutcome {
     pub time_to_first_exit: Option<u64>,
@@ -20,6 +27,31 @@ pub struct SurvivalMetricsCollector {
 
     liveness_threshold: usize,
     safety_threshold: usize,
+
+    events: Arc<Mutex<EventRegistry>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+pub enum SimulationEvent {
+    FirstExit,
+    Nc33Breach,
+    Nc50Breach,
+    Collapse,
+}
+
+#[derive(Default)]
+pub struct EventRegistry {
+    triggered: HashSet<SimulationEvent>,
+}
+
+impl EventRegistry {
+    pub fn trigger(&mut self, event: SimulationEvent) {
+        self.triggered.insert(event);
+    }
+
+    pub fn has_triggered(&self, event: &SimulationEvent) -> bool {
+        self.triggered.contains(event)
+    }
 }
 
 impl SurvivalMetricsCollector {
@@ -36,6 +68,7 @@ impl SurvivalMetricsCollector {
             },
             liveness_threshold,
             safety_threshold,
+            events: Arc::new(Mutex::new(EventRegistry::default())),
         }
     }
 }
@@ -58,21 +91,37 @@ impl MetricsObserver<ValidatorGlobalMetrics> for SurvivalMetricsCollector {
         // F1: first validator exit
         if self.outcome.time_to_first_exit.is_none() && metrics.active_validators < initial {
             self.outcome.time_to_first_exit = Some(block);
+            self.events
+                .lock()
+                .unwrap()
+                .trigger(SimulationEvent::FirstExit);
         }
 
         // F2: liveness breach
         if self.outcome.time_to_nc33_breach.is_none() && metrics.nc33 <= self.liveness_threshold {
             self.outcome.time_to_nc33_breach = Some(block);
+            self.events
+                .lock()
+                .unwrap()
+                .trigger(SimulationEvent::Nc33Breach);
         }
 
         // F3: safety breach
         if self.outcome.time_to_nc50_breach.is_none() && metrics.nc50 <= self.safety_threshold {
             self.outcome.time_to_nc50_breach = Some(block);
+            self.events
+                .lock()
+                .unwrap()
+                .trigger(SimulationEvent::Nc50Breach);
         }
 
         // F4: collapse
         if self.outcome.time_to_collapse.is_none() && metrics.active_validators <= 1 {
             self.outcome.time_to_collapse = Some(block);
+            self.events
+                .lock()
+                .unwrap()
+                .trigger(SimulationEvent::Collapse);
         }
     }
 }

@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::domain::validator::metrics::survival::SimulationEvent;
+
 #[derive(Debug, Deserialize)]
 pub struct RootConfig {
     pub domain: String,
@@ -38,12 +40,12 @@ pub struct SurvivalListenerConfig {
 #[derive(Debug, Deserialize)]
 pub struct DistributionListenerConfig {
     pub enabled: bool,
-    pub sampling_strategy: SamplingStrategyConfig,
+    pub sampling_strategies: Vec<SamplingStrategyConfig>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum SamplingStrategyConfig {
     EveryNBlocks { interval: u64 },
-    // Can add more strategies here
+    OnEvent { event: SimulationEvent },
 }

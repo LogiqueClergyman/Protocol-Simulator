@@ -1,6 +1,6 @@
 use crate::bootstrap::SimulationResults;
+use crate::domain::validator::metrics::ValidatorListeners;
 use crate::domain::validator::metrics::global::ValidatorGlobalMetrics;
-use crate::domain::validator::metrics::{EveryNBlocks, ValidatorListeners};
 use crate::metrics::recorder::MetricsRecorder;
 
 /// Trait for printing domain-specific results
@@ -21,7 +21,7 @@ impl ResultPrinter for ValidatorResultPrinter {
 
         let listeners = results
             .listeners
-            .downcast::<ValidatorListeners<EveryNBlocks>>()
+            .downcast::<ValidatorListeners>()
             .expect("Failed to downcast listeners");
 
         println!(

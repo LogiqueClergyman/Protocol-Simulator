@@ -5,19 +5,13 @@ use crate::domain::validator::metrics::global::{
 use crate::domain::validator::state::ValidatorWorld;
 use crate::metrics::traits::TickListener;
 
-pub struct StakeDistributionCollector<S>
-where
-    S: SamplingStrategy,
-{
-    sampler: S,
+pub struct StakeDistributionCollector {
+    sampler: Vec<Box<dyn SamplingStrategy>>,
     pub records: Vec<StakeDistributionSnapshot>,
 }
 
-impl<S> StakeDistributionCollector<S>
-where
-    S: SamplingStrategy,
-{
-    pub fn new(sampler: S) -> Self {
+impl StakeDistributionCollector {
+    pub fn new(sampler: Vec<Box<dyn SamplingStrategy>>) -> Self {
         Self {
             sampler,
             records: Vec::new(),
@@ -27,7 +21,7 @@ where
     pub fn record(&mut self, state: &ValidatorWorld) -> Option<StakeDistributionSnapshot> {
         let block = state.protocol.current_block;
 
-        if !self.sampler.should_sample(block) {
+        if !self.sampler.iter_mut().any(|s| s.should_sample(block)) {
             return None;
         }
 
@@ -86,10 +80,7 @@ fn compute_gini(mut values: Vec<f64>) -> f64 {
     weighted_sum / (n as f64 * sum)
 }
 
-impl<S> TickListener<ValidatorWorld, ValidatorGlobalMetrics> for StakeDistributionCollector<S>
-where
-    S: SamplingStrategy + 'static,
-{
+impl TickListener<ValidatorWorld, ValidatorGlobalMetrics> for StakeDistributionCollector {
     fn on_tick(&mut self, state: &ValidatorWorld, _global: &ValidatorGlobalMetrics) {
         if let Some(snapshot) = self.record(state) {
             self.records.push(snapshot);

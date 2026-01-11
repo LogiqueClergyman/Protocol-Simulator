@@ -27,10 +27,28 @@ pub struct ProtocolConfig {
     pub slashing_fraction: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ValidatorConfig {
     pub count: u64,
     pub initial_stake: f64,
+    pub tiers: Vec<ValidatorTier>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ValidatorTier {
+    /// Range start (inclusive)
+    pub id_range_start: u64,
+    /// Range end (inclusive)
+    pub id_range_end: u64,
+    /// Operating cost per block
+    pub operating_cost_per_block: f64,
+    /// Risk aversion (0.0 to 1.0)
+    pub risk_aversion: f64,
+    /// Restake ratio (0.0 to 1.0)
+    pub restake_ratio: f64,
+    /// Optional description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 impl ValidatorScenarioConfig {
@@ -45,34 +63,23 @@ impl ValidatorScenarioConfig {
 
         let validators = (0..self.validators.count)
             .map(|id| {
-                let operating_cost = match id {
-                    0..=19 => 0.5,  // professional operators
-                    20..=59 => 1.0, // mid-sized
-                    60..=89 => 1.5, // small
-                    _ => 2.5,       // hobby / marginal
-                };
+                // Find the tier for this validator ID
+                let tier = self
+                    .validators
+                    .tiers
+                    .iter()
+                    .find(|t| id >= t.id_range_start && id <= t.id_range_end)
+                    .expect(&format!("No tier found for validator ID {}", id));
 
-                let risk_aversion = match id {
-                    0..=19 => 0.8,
-                    20..=59 => 0.5,
-                    _ => 0.2,
-                };
-
-                let restake_ratio = match id {
-                    0..=19 => 0.9,  // large / institutional validators
-                    20..=59 => 0.6, // mid-sized operators
-                    60..=89 => 0.3, // small validators
-                    _ => 0.1,       // hobbyists
-                };
                 Validator {
                     id,
                     stake: self.validators.initial_stake,
                     balance: 0.0,
                     active: true,
-                    operating_cost_per_block: operating_cost,
-                    risk_aversion,
+                    operating_cost_per_block: tier.operating_cost_per_block,
+                    risk_aversion: tier.risk_aversion,
                     cooldown_blocks_remaining: 0,
-                    restake_ratio,
+                    restake_ratio: tier.restake_ratio,
                 }
             })
             .collect();

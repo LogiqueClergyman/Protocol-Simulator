@@ -1,9 +1,14 @@
 use crate::config::root::{ListenersConfig, RootConfig, SamplingStrategyConfig};
 use crate::config::validator::ValidatorScenarioConfig;
-use crate::domain::validator::metrics::{EveryNBlocks, GlobalMetricsCollector, ValidatorListeners};
+use crate::domain::validator::metrics::sampling::SamplingStrategy;
+use crate::domain::validator::metrics::survival::EventRegistry;
+use crate::domain::validator::metrics::{
+    EveryNBlocks, GlobalMetricsCollector, OnEvent, ValidatorListeners,
+};
 use crate::engine::engine::SimulationEngine;
 use anyhow::{Result, anyhow};
 use std::fs;
+use std::sync::{Arc, Mutex};
 
 /// Bootstrap the simulation from a config file
 pub fn bootstrap_from_file(path: &str) -> Result<Box<dyn SimulationRunner>> {
@@ -53,7 +58,7 @@ fn bootstrap_validator(config_json: &str) -> Result<Box<dyn SimulationRunner>> {
 }
 
 /// Build validator listeners from config
-fn build_validator_listeners(config: &ListenersConfig) -> Result<ValidatorListeners<EveryNBlocks>> {
+fn build_validator_listeners(config: &ListenersConfig) -> Result<ValidatorListeners> {
     let survival_config = config
         .survival
         .as_ref()
@@ -64,16 +69,26 @@ fn build_validator_listeners(config: &ListenersConfig) -> Result<ValidatorListen
         .as_ref()
         .ok_or_else(|| anyhow!("Distribution listener config required"))?;
 
-    let sampling_strategy = match &distribution_config.sampling_strategy {
-        SamplingStrategyConfig::EveryNBlocks { interval } => EveryNBlocks {
-            interval: *interval,
-        },
-    };
+    let sampling_strategies: Vec<Box<dyn SamplingStrategy>> = distribution_config
+        .sampling_strategies
+        .iter()
+        .map(|strategy| -> Box<dyn SamplingStrategy> {
+            match strategy {
+                SamplingStrategyConfig::EveryNBlocks { interval } => Box::new(EveryNBlocks {
+                    interval: *interval,
+                }),
+                SamplingStrategyConfig::OnEvent { event } => {
+                    let events = Arc::new(Mutex::new(EventRegistry::default()));
+                    Box::new(OnEvent::new(*event, events.clone()))
+                }
+            }
+        })
+        .collect();
 
     Ok(ValidatorListeners::new(
         survival_config.liveness_threshold,
         survival_config.safety_threshold,
-        sampling_strategy,
+        sampling_strategies,
     ))
 }
 
