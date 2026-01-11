@@ -114,7 +114,7 @@ where
     L: crate::metrics::traits::TickListener<D::State, M::Record> + 'static,
 {
     fn run(self: Box<Self>) -> Result<SimulationResults> {
-        let (recorder, listeners) = self.engine.run();
+        let (recorder, listeners) = self.engine.run()?;
 
         Ok(SimulationResults {
             domain: self.domain_name,

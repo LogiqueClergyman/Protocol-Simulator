@@ -5,5 +5,5 @@ pub trait Domain {
     fn init_state(&self) -> Self::State;
 
     /// Advance the domain by exactly one tick
-    fn tick(&mut self, state: &mut Self::State);
+    fn tick(&mut self, state: &mut Self::State) -> anyhow::Result<()>;
 }

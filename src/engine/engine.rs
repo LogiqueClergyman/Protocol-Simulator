@@ -23,19 +23,28 @@ where
     M::Record: 'static,
     L: TickListener<D::State, M::Record>,
 {
-    pub fn run(mut self) -> (MetricsRecorder<M::Record>, L) {
+    pub fn run(mut self) -> anyhow::Result<(MetricsRecorder<M::Record>, L)> {
         let mut state = self.domain.init_state();
         let mut recorder = MetricsRecorder::new();
 
-        for _ in 0..self.max_ticks {
-            self.domain.tick(&mut state);
+        for tick in 0..self.max_ticks {
+            if let Err(e) = self.domain.tick(&mut state) {
+                eprintln!(
+                    "\n⚠️  Simulation stopped at tick {}/{}: {}",
+                    tick, self.max_ticks, e
+                );
+                eprintln!(
+                    "📊 Returning {} ticks of collected data for analysis\n",
+                    recorder.records.len()
+                );
+                return Ok((recorder, self.listeners));
+            }
+
             let global = self.metrics.record(&state);
-
             self.listeners.on_tick(&state, &global);
-
             recorder.push(global);
         }
 
-        (recorder, self.listeners)
+        Ok((recorder, self.listeners))
     }
 }

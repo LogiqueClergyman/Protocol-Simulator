@@ -10,7 +10,7 @@ use output::get_printer;
 
 fn main() -> anyhow::Result<()> {
     // Bootstrap the simulation from config - fully config-driven!
-    let runner = bootstrap_from_file("configs/validator_basic.json")?;
+    let runner = bootstrap_from_file("configs/example_composite.json")?;
 
     let results = runner.run()?;
 

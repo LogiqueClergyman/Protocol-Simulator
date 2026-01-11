@@ -20,7 +20,7 @@ impl Domain for ValidatorDomain {
         }
     }
 
-    fn tick(&mut self, state: &mut Self::State) {
+    fn tick(&mut self, state: &mut Self::State) -> anyhow::Result<()> {
         let mut rng = rand::rng();
         state.protocol.current_block += 1;
 
@@ -35,7 +35,10 @@ impl Domain for ValidatorDomain {
             .sum();
 
         if observed_total_stake == 0.0 {
-            panic!("Protocol failure: no active validators");
+            anyhow::bail!(
+                "Protocol failure at block {}: no active validators",
+                state.protocol.current_block
+            );
         }
 
         let decisions: Vec<(usize, Decision)> = state
@@ -86,7 +89,10 @@ impl Domain for ValidatorDomain {
             .sum();
 
         if total_active_stake == 0.0 {
-            panic!("Protocol failure after exits");
+            anyhow::bail!(
+                "Protocol failure at block {}: all validators exited (no active stake remaining)",
+                state.protocol.current_block
+            );
         }
 
         /* -----------------------------
@@ -122,7 +128,10 @@ impl Domain for ValidatorDomain {
             .sum();
 
         if final_total_stake == 0.0 {
-            panic!("Protocol failure after slashing");
+            anyhow::bail!(
+                "Protocol failure at block {}: all validators slashed out (no active stake after slashing)",
+                state.protocol.current_block
+            );
         }
 
         for v in state.validators.iter_mut() {
@@ -136,5 +145,7 @@ impl Domain for ValidatorDomain {
                 v.balance += income;
             }
         }
+
+        Ok(())
     }
 }
