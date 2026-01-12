@@ -1,0 +1,36 @@
+{
+  "domain": "validator",
+  "simulation": {
+    "max_ticks": 50000
+  },
+  "protocol": {
+    "reward_per_block": 10.0,
+    "min_stake_required": 100.0,
+    "slashing_probability": 0.001,
+    "slashing_fraction": 0.1
+  },
+  "validators": {
+    "count": 100,
+    "initial_stake": 1000.0
+  },
+  "metrics": {
+    "enabled": true,
+    "collectors": []
+  },
+  "listeners": {
+    "survival": {
+      "enabled": true,
+      "liveness_threshold": 3,
+      "safety_threshold": 2
+    },
+    "distribution": {
+      "enabled": true,
+      "sampling_strategies": [
+        {
+          "type": "every_n_blocks",
+          "interval": 5000
+        }
+      ]
+    }
+  }
+}

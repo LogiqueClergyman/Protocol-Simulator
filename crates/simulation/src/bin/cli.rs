@@ -1,12 +1,4 @@
-mod bootstrap;
-mod config;
-mod domain;
-mod engine;
-mod metrics;
-mod output;
-
-use bootstrap::bootstrap_from_file;
-use output::get_printer;
+use simulation::{bootstrap_from_file, output::get_printer};
 
 fn main() -> anyhow::Result<()> {
     // Bootstrap the simulation from config - fully config-driven!
