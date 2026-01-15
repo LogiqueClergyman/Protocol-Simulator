@@ -11,15 +11,11 @@ import {
 } from 'recharts';
 import { dataColors } from '@/styles/theme';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DataPoint = Record<string, any>;
-
-
-interface LineChartProps {
-  data: DataPoint[];
-  xKey: string;
+interface LineChartProps<T> {
+  data: T[];
+  xKey: keyof T & string;
   yKeys: {
-    key: string;
+    key: keyof T & string;
     name: string;
     color?: string;
   }[];
@@ -36,14 +32,14 @@ interface LineChartProps {
 /**
  * Themed line chart for time series data
  */
-export function LineChart({
+export function LineChart<T extends object>({
   data,
   xKey,
   yKeys,
   xFormatter = (v) => v.toLocaleString(),
   yFormatter = (v) => v.toLocaleString(),
   referenceLines = [],
-}: LineChartProps) {
+}: LineChartProps<T>) {
   const colors = [
     dataColors.nc33,
     dataColors.nc50,
@@ -56,7 +52,6 @@ export function LineChart({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsLineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
         <XAxis 
           dataKey={xKey}
@@ -80,7 +75,10 @@ export function LineChart({
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
           labelFormatter={(label) => `Block ${xFormatter(Number(label))}`}
-          formatter={(value: number, name: string) => [yFormatter(value), name]}
+          formatter={(value: number | undefined, name: string | undefined) => {
+            const safeValue = typeof value === 'number' ? value : 0;
+            return [yFormatter(safeValue), name ?? ''];
+          }}
         />
         <Legend 
           verticalAlign="top" 
@@ -91,11 +89,11 @@ export function LineChart({
           <ReferenceLine 
             key={idx}
             y={ref.y} 
-            stroke={ref.color || '#EF4444'}
+            stroke={ref.color ?? '#EF4444'}
             strokeDasharray="5 5"
             label={{ 
               value: ref.label, 
-              fill: ref.color || '#EF4444',
+              fill: ref.color ?? '#EF4444',
               fontSize: 12,
               position: 'right'
             }}
@@ -107,7 +105,7 @@ export function LineChart({
             type="monotone"
             dataKey={item.key}
             name={item.name}
-            stroke={item.color || colors[idx % colors.length]}
+            stroke={item.color ?? colors[idx % colors.length]}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}

@@ -10,14 +10,10 @@ import {
 } from 'recharts';
 import { dataColors } from '@/styles/theme';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DataPoint = Record<string, any>;
-
-
-interface BarChartProps {
-  data: DataPoint[];
-  xKey: string;
-  yKey: string;
+interface BarChartProps<T> {
+  data: T[];
+  xKey: keyof T & string;
+  yKey: keyof T & string;
   xFormatter?: (value: number | string) => string;
   yFormatter?: (value: number) => string;
   /** Use gradient coloring for bars */
@@ -27,14 +23,14 @@ interface BarChartProps {
 /**
  * Themed bar chart with optional gradient coloring
  */
-export function BarChart({
+export function BarChart<T extends object>({
   data,
   xKey,
   yKey,
   xFormatter = (v) => String(v),
   yFormatter = (v) => v.toLocaleString(),
   useGradient = true,
-}: BarChartProps) {
+}: BarChartProps<T>) {
   const colors = dataColors.distribution;
 
   // Generate color based on position (darker for top validators)
@@ -46,7 +42,7 @@ export function BarChart({
     
     // Rest fade to muted
     const opacity = 1 - (index / total) * 0.6;
-    return `rgba(27, 212, 136, ${opacity})`;
+    return `rgba(27, 212, 136, ${opacity.toString()})`;
   };
 
   return (
@@ -74,7 +70,10 @@ export function BarChart({
             borderRadius: '8px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
-          formatter={(value: number) => [yFormatter(value), 'Stake']}
+          formatter={(value: number | undefined) => {
+            const safeValue = typeof value === 'number' ? value : 0;
+            return [yFormatter(safeValue), 'Stake'];
+          }}
         />
         <Bar 
           dataKey={yKey} 
@@ -82,7 +81,7 @@ export function BarChart({
         >
           {data.map((_, index) => (
             <Cell 
-              key={`cell-${index}`} 
+              key={`cell-${index.toString()}`} 
               fill={getBarColor(index, data.length)}
             />
           ))}

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 
 interface DashboardLayoutProps {
@@ -28,7 +28,7 @@ export function DashboardLayout({
         <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200">
           <div className="px-8 py-5">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
-            {subtitle && (
+            {subtitle !== undefined && (
               <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
             )}
           </div>

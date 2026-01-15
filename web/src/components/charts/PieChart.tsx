@@ -11,6 +11,7 @@ import { dataColors } from '@/styles/theme';
 interface PieDataPoint {
   name: string;
   value: number;
+  [key: string]: unknown;
 }
 
 interface PieChartProps {
@@ -33,8 +34,8 @@ export function PieChart({
 }: PieChartProps) {
   const colors = [
     dataColors.validators,
-    dataColors.secondary,
-    dataColors.tertiary,
+    dataColors.stake, // Semantic for secondary
+    dataColors.nc33, // Semantic for tertiary
     '#2DD4BF',
     '#06B6D4',
     '#0EA5E9',
@@ -54,14 +55,14 @@ export function PieChart({
           paddingAngle={2}
           dataKey="value"
           nameKey="name"
-          label={({ name, percent }) => 
-            percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''
+          label={({ name, percent }: { name?: string; percent?: number }) => 
+            (percent ?? 0) > 0.05 ? `${name ?? ''}: ${((percent ?? 0) * 100).toFixed(0)}%` : ''
           }
           labelLine={false}
         >
           {data.map((_, index) => (
             <Cell 
-              key={`cell-${index}`} 
+              key={`cell-${index.toString()}`} 
               fill={colors[index % colors.length]}
               stroke="white"
               strokeWidth={2}
@@ -75,8 +76,13 @@ export function PieChart({
             borderRadius: '8px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
-          formatter={(value: number) => [valueFormatter(value), 'Stake']}
+          formatter={(value: number | undefined) => {
+             // Handle potential undefined/null values safely
+             const safeValue = typeof value === 'number' ? value : 0;
+             return [valueFormatter(safeValue), 'Stake'];
+          }}
         />
+
         <Legend 
           verticalAlign="bottom" 
           height={36}

@@ -19,8 +19,12 @@ export function ValidatorCharts({ data, section }: ValidatorChartsProps) {
   const latestDistribution = data.distribution_snapshots[data.distribution_snapshots.length - 1];
 
   // Calculate changes
-  const validatorChange = ((latestMetrics.active_validators - firstMetrics.active_validators) / firstMetrics.active_validators * 100);
-  const stakeChange = ((latestMetrics.total_active_stake - firstMetrics.total_active_stake) / firstMetrics.total_active_stake * 100);
+  const validatorChange = firstMetrics.active_validators > 0 
+    ? ((latestMetrics.active_validators - firstMetrics.active_validators) / firstMetrics.active_validators * 100) 
+    : 0;
+  const stakeChange = firstMetrics.total_active_stake > 0 
+    ? ((latestMetrics.total_active_stake - firstMetrics.total_active_stake) / firstMetrics.total_active_stake * 100) 
+    : 0;
 
   if (section === 'overview') {
     return <OverviewSection data={data} validatorChange={validatorChange} stakeChange={stakeChange} />;
@@ -232,7 +236,7 @@ function DistributionSection({ distribution }: { distribution: SimulationOutput[
               data={topValidators}
               xKey="rank"
               yKey="stake"
-              xFormatter={(v) => `#${v}`}
+              xFormatter={(v) => `#${v.toString()}`}
               yFormatter={formatStake}
             />
           </ChartContainer>
@@ -264,22 +268,22 @@ function SurvivalSection({ data }: { data: SimulationOutput }) {
     { 
       label: 'First Exit', 
       value: survival_metrics.time_to_first_exit,
-      status: survival_metrics.time_to_first_exit ? 'triggered' : 'ok'
+      status: (survival_metrics.time_to_first_exit ?? 0) > 0 ? 'triggered' : 'ok'
     },
     { 
       label: 'NC33 Breach', 
       value: survival_metrics.time_to_nc33_breach,
-      status: survival_metrics.time_to_nc33_breach ? 'critical' : 'ok'
+      status: (survival_metrics.time_to_nc33_breach ?? 0) > 0 ? 'critical' : 'ok'
     },
     { 
       label: 'NC50 Breach', 
       value: survival_metrics.time_to_nc50_breach,
-      status: survival_metrics.time_to_nc50_breach ? 'critical' : 'ok'
+      status: (survival_metrics.time_to_nc50_breach ?? 0) > 0 ? 'critical' : 'ok'
     },
     { 
       label: 'Collapse', 
       value: survival_metrics.time_to_collapse,
-      status: survival_metrics.time_to_collapse ? 'critical' : 'ok'
+      status: (survival_metrics.time_to_collapse ?? 0) > 0 ? 'critical' : 'ok'
     },
   ];
 

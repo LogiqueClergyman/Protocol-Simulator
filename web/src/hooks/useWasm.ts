@@ -9,12 +9,14 @@ export function useWasm() {
     useEffect(() => {
         init()
             .then(() => {
-                console.log('WASM module initialized');
                 setIsReady(true);
             })
-            .catch((err) => {
-                console.error('Failed to initialize WASM:', err);
-                setError(err.message);
+            .catch((err: unknown) => {
+                const message = err instanceof Error ? err.message : String(err);
+                if (import.meta.env.DEV) {
+                    console.error('Failed to initialize WASM:', message);
+                }
+                setError(message);
             });
     }, []);
 
@@ -36,6 +38,9 @@ export function useSimulation() {
         setError(null);
 
         try {
+            // Yield to event loop to allow UI to update loading state
+            await new Promise(resolve => setTimeout(resolve, 0));
+
             const resultJson = runSimulation(JSON.stringify(config));
             const result = JSON.parse(resultJson) as SimulationResult;
             return result;

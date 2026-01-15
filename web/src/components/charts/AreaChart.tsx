@@ -10,16 +10,11 @@ import {
 } from 'recharts';
 import { dataColors } from '@/styles/theme';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DataPoint = Record<string, any>;
-
-
-interface AreaChartProps {
-  data: DataPoint[];
-  xKey: string;
+interface AreaChartProps<T> {
+  data: T[];
+  xKey: keyof T & string;
   yKeys: {
-
-    key: string;
+    key: keyof T & string;
     name: string;
     color?: string;
     yAxisId?: string;
@@ -32,14 +27,14 @@ interface AreaChartProps {
 /**
  * Themed area chart with gradient fills
  */
-export function AreaChart({
+export function AreaChart<T extends object>({
   data,
   xKey,
   yKeys,
   xFormatter = (v) => v.toLocaleString(),
   yFormatter = (v) => v.toLocaleString(),
   rightYFormatter = (v) => v.toLocaleString(),
-}: AreaChartProps) {
+}: AreaChartProps<T>) {
   const colors = [
     dataColors.validators,
     dataColors.stake,
@@ -63,12 +58,12 @@ export function AreaChart({
             >
               <stop 
                 offset="5%" 
-                stopColor={item.color || colors[idx % colors.length]} 
+                stopColor={item.color ?? colors[idx % colors.length]} 
                 stopOpacity={0.3}
               />
               <stop 
                 offset="95%" 
-                stopColor={item.color || colors[idx % colors.length]} 
+                stopColor={item.color ?? colors[idx % colors.length]} 
                 stopOpacity={0}
               />
             </linearGradient>
@@ -109,11 +104,14 @@ export function AreaChart({
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
           labelFormatter={(label) => `Block ${xFormatter(Number(label))}`}
-          formatter={(value: number, name: string, props: any) => {
+          formatter={(value: number | undefined, name: string | undefined, props: { yAxisId?: string; payload?: { yAxisId?: string } } | undefined) => {
             // Use the correct formatter based on the axis
-            const axisId = props.yAxisId;
+            const axisId = props?.payload?.yAxisId ?? props?.yAxisId; // Robust check
             const formatter = axisId === 'right' ? rightYFormatter : yFormatter;
-            return [formatter(value), name];
+            
+            // Recharts types can be tricky, ensuring value is treated as number
+            const safeValue = typeof value === 'number' ? value : 0;
+            return [formatter(safeValue), name ?? ''];
           }}
         />
         <Legend 
@@ -124,11 +122,11 @@ export function AreaChart({
         {yKeys.map((item, idx) => (
           <Area
             key={item.key}
-            yAxisId={item.yAxisId || 'left'}
+            yAxisId={item.yAxisId ?? 'left'}
             type="monotone"
             dataKey={item.key}
             name={item.name}
-            stroke={item.color || colors[idx % colors.length]}
+            stroke={item.color ?? colors[idx % colors.length]}
             fill={`url(#gradient-${item.key})`}
             strokeWidth={2}
           />

@@ -80,7 +80,7 @@ function App() {
     },
   };
 
-  const { title, subtitle } = sectionTitles[activeSection] || sectionTitles.overview;
+  const { title, subtitle } = sectionTitles[activeSection] ?? sectionTitles.overview;
 
   return (
     <DashboardLayout

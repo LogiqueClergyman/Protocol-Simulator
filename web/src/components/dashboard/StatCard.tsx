@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -27,8 +27,8 @@ export function StatCard({
   variant = 'default',
   className,
 }: StatCardProps) {
-  const isPositive = change !== undefined && change >= 0;
   const isNeutral = change === undefined;
+  const isPositive = !isNeutral && change >= 0;
   const isPrimary = variant !== 'default';
   
   return (
@@ -52,7 +52,7 @@ export function StatCard({
         )}>
           {value}
         </span>
-        {unit && (
+        {unit !== undefined && (
           <span className={cn(
             'text-sm',
             isPrimary ? 'text-white/70' : 'text-slate-400'
@@ -69,7 +69,7 @@ export function StatCard({
               isPrimary ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'
             )}>
               <TrendingUp className="h-3 w-3" />
-              +{change?.toFixed(1)}%
+              +{change.toFixed(1)}%
             </div>
           ) : (
             <div className={cn(
@@ -77,7 +77,7 @@ export function StatCard({
               isPrimary ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'
             )}>
               <TrendingDown className="h-3 w-3" />
-              {change?.toFixed(1)}%
+              {change.toFixed(1)}%
             </div>
           )}
           <span className={cn(
