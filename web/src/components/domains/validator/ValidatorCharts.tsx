@@ -1,3 +1,4 @@
+import React from 'react';
 import { ChartContainer, AreaChart, LineChart, BarChart, PieChart } from '@/components/charts';
 import { ChartGrid, StatCard } from '@/components/dashboard';
 import type { SimulationOutput } from '@/types/simulation';
@@ -45,6 +46,35 @@ export function ValidatorCharts({ data, section }: ValidatorChartsProps) {
   return <OverviewSection data={data} validatorChange={validatorChange} stakeChange={stakeChange} />;
 }
 
+// Helper hook to downsample data for visualization
+// Reduces 1M+ points to a manageable number (e.g. 2000) for Recharts
+// Helper hook to downsample data for visualization
+// Uses simple uniform sampling (every Nth point) as requested by user
+// to avoid visual noise from high-frequency volatility.
+function useDownsampledMetrics(metrics: SimulationOutput['global_metrics'], targetPoints = 2000) {
+  return React.useMemo(() => {
+    // If we have fewer points than target, just return all of them
+    if (metrics.length <= targetPoints) return metrics;
+    
+    const sampled = [];
+    const step = Math.ceil(metrics.length / targetPoints);
+    
+    for (let i = 0; i < metrics.length; i += step) {
+      sampled.push(metrics[i]);
+    }
+    
+    // Always ensure the very first and last points are included
+    if (sampled[0] !== metrics[0]) {
+      sampled.unshift(metrics[0]);
+    }
+    if (sampled[sampled.length - 1] !== metrics[metrics.length - 1]) {
+      sampled.push(metrics[metrics.length - 1]);
+    }
+    
+    return sampled;
+  }, [metrics, targetPoints]);
+}
+
 // --- Overview Section ---
 interface OverviewSectionProps {
   data: SimulationOutput;
@@ -54,24 +84,64 @@ interface OverviewSectionProps {
 
 function OverviewSection({ data, validatorChange, stakeChange }: OverviewSectionProps) {
   const latestMetrics = data.global_metrics[data.global_metrics.length - 1];
+  const chartData = useDownsampledMetrics(data.global_metrics);
+  
+  // Check for collapse (either recorded metric OR engine stop)
+  const isCollapsed = (data.survival_metrics.time_to_collapse !== undefined && data.survival_metrics.time_to_collapse !== null) || data.stopped_early;
+  
+  // If collapsed, override display values to show 0
+  const displayValidators = isCollapsed ? 0 : latestMetrics.active_validators;
+  const displayStake = isCollapsed ? 0 : latestMetrics.total_active_stake;
+
+  // Add a final 0 point to chart if collapsed
+  const finalChartData = React.useMemo(() => {
+    if (!isCollapsed) return chartData;
+    const lastBlock = chartData[chartData.length - 1].block;
+    return [
+      ...chartData,
+      {
+        ...chartData[chartData.length - 1],
+        block: lastBlock + 1,
+        active_validators: 0,
+        total_active_stake: 0,
+        nc33: 0,
+        nc50: 0
+      }
+    ];
+  }, [chartData, isCollapsed]);
 
   return (
     <div className="space-y-6">
+      {isCollapsed && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-800">
+           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+           <div>
+             <div className="font-semibold">Protocol Collapsed!</div>
+             <div className="text-sm text-red-700">
+               {data.stop_reason 
+                 ? `Simulation stopped early: ${data.stop_reason}`
+                 : `The protocol failed at block ${data.survival_metrics.time_to_collapse?.toLocaleString()} due to validator exodus.`
+               }
+             </div>
+           </div>
+        </div>
+      )}
+
       {/* Stats Row */}
       <ChartGrid>
         <ChartGrid.Item colSpan={3}>
           <StatCard
             label="Active Validators"
-            value={latestMetrics.active_validators.toLocaleString()}
-            change={validatorChange}
+            value={displayValidators.toLocaleString()}
+            change={isCollapsed ? -100 : validatorChange}
             variant="primary"
           />
         </ChartGrid.Item>
         <ChartGrid.Item colSpan={3}>
           <StatCard
             label="Total Stake"
-            value={formatStake(latestMetrics.total_active_stake)}
-            change={stakeChange}
+            value={formatStake(displayStake)}
+            change={isCollapsed ? -100 : stakeChange}
             variant="success"
           />
         </ChartGrid.Item>
@@ -98,7 +168,7 @@ function OverviewSection({ data, validatorChange, stakeChange }: OverviewSection
         height={350}
       >
         <AreaChart
-          data={data.global_metrics}
+          data={finalChartData}
           xKey="block"
           yKeys={[
             { key: 'total_active_stake', name: 'Stake', color: dataColors.stake },
@@ -120,7 +190,7 @@ function OverviewSection({ data, validatorChange, stakeChange }: OverviewSection
             height={300}
           >
             <LineChart
-              data={data.global_metrics}
+              data={chartData}
               xKey="block"
               yKeys={[
                 { key: 'nc33', name: 'NC33' },
@@ -143,6 +213,8 @@ function OverviewSection({ data, validatorChange, stakeChange }: OverviewSection
 
 // --- Decentralization Section ---
 function DecentralizationSection({ data }: { data: SimulationOutput }) {
+  const chartData = useDownsampledMetrics(data.global_metrics);
+
   return (
     <div className="space-y-6">
       <ChartContainer 
@@ -151,7 +223,7 @@ function DecentralizationSection({ data }: { data: SimulationOutput }) {
         height={400}
       >
         <LineChart
-          data={data.global_metrics}
+          data={chartData}
           xKey="block"
           yKeys={[
             { key: 'nc33', name: 'NC33 (33% stake)' },
@@ -283,7 +355,7 @@ function SurvivalSection({ data }: { data: SimulationOutput }) {
     { 
       label: 'Collapse', 
       value: survival_metrics.time_to_collapse,
-      status: (survival_metrics.time_to_collapse ?? 0) > 0 ? 'critical' : 'ok'
+      status: ((survival_metrics.time_to_collapse ?? 0) > 0 || data.stopped_early) ? 'critical' : 'ok'
     },
   ];
 
@@ -351,9 +423,9 @@ function SurvivalSummaryCard({ metrics }: { metrics: SimulationOutput['survival_
           <div key={event.label} className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">{event.label}</span>
             <span className={`text-sm font-medium ${
-              event.value === undefined ? 'text-emerald-600' : 'text-amber-600'
+              event.value === undefined || event.value === null ? 'text-emerald-600' : 'text-amber-600'
             }`}>
-              {event.value !== undefined ? formatBlock(event.value) : 'N/A'}
+              {event.value !== undefined && event.value !== null ? formatBlock(event.value) : 'N/A'}
             </span>
           </div>
         ))}
@@ -369,6 +441,5 @@ function formatStake(value: number): string {
 }
 
 function formatBlock(value: number): string {
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return value.toString();
+  return value.toLocaleString();
 }

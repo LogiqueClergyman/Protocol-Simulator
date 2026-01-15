@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import init, { runSimulation, calculateGini } from '../wasm/wasm_bindings';
-import type { SimulationConfig, SimulationResult } from '../types';
+import type { SimulationOutput } from '../types';
 
 export function useWasm() {
     const [isReady, setIsReady] = useState(false);
@@ -28,7 +28,7 @@ export function useSimulation() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const run = async (config: SimulationConfig): Promise<SimulationResult | null> => {
+    const run = async (config?: string | object): Promise<SimulationOutput | null> => {
         if (!isReady) {
             setError('WASM module not ready');
             return null;
@@ -42,10 +42,11 @@ export function useSimulation() {
             await new Promise(resolve => setTimeout(resolve, 0));
 
             const resultJson = runSimulation(JSON.stringify(config));
-            const result = JSON.parse(resultJson) as SimulationResult;
+            const result = JSON.parse(resultJson) as SimulationOutput;
             return result;
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            console.error('Simulation Error:', err);
+            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error');
             setError(errorMessage);
             return null;
         } finally {
@@ -62,7 +63,8 @@ export function useSimulation() {
         try {
             return calculateGini(new Float64Array(stakes));
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            console.error('WASM Error:', err);
+            const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Unknown error');
             setError(errorMessage);
             return null;
         }
