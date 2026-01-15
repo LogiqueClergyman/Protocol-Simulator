@@ -1,3 +1,3 @@
-export { StatusBadge } from './StatusBadge';
-export { Button } from './Button';
-export { ResultCard } from './ResultCard';
+// Re-export from organized subfolders
+export * from './dashboard';
+export * from './charts';

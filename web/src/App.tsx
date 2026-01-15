@@ -1,105 +1,96 @@
 import { useState } from 'react';
-import { useSimulation } from './hooks/useWasm';
-import { StatusBadge, Button, ResultCard } from './components';
-import type { SimulationResult } from './types';
+import { DashboardLayout } from '@/components/dashboard';
+import { ValidatorCharts } from '@/components/domains/validator';
+import type { SimulationOutput } from '@/types/simulation';
+
+// Generate realistic stake distribution (power law)
+function generateRealisticStakes(count: number, totalStake: number): number[] {
+  const stakes: number[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    const rank = i + 1;
+    const stake = totalStake / (rank ** 1.5);
+    stakes.push(stake);
+  }
+  
+  const sum = stakes.reduce((a, b) => a + b, 0);
+  return stakes.map(s => (s / sum) * totalStake);
+}
+
+const realisticStakes = generateRealisticStakes(100, 10000000);
+
+// Mock data - Realistic growing protocol
+const mockSimulationData: SimulationOutput = {
+  domain: 'validator',
+  total_ticks: 100000,
+  stopped_early: false,
+  stop_reason: undefined,
+  global_metrics: Array.from({ length: 100 }, (_, i) => {
+    const progress = i / 100;
+    return {
+      block: i * 1000,
+      active_validators: Math.floor(80 + i * 0.3 + Math.sin(i / 8) * 5),
+      total_active_stake: 8000000 + i * 20000 + Math.sin(i / 6) * 100000,
+      nc33: Math.floor(10 - progress * 2 + Math.sin(i / 15) * 1.5),
+      nc50: Math.floor(18 - progress * 3 + Math.sin(i / 12) * 2),
+    };
+  }),
+  survival_metrics: {
+    time_to_first_exit: 12000,
+    time_to_nc33_breach: undefined,
+    time_to_nc50_breach: undefined,
+    time_to_collapse: undefined,
+    min_nc33: 8,
+    min_nc50: 15,
+  },
+  distribution_snapshots: [
+    {
+      block: 100000,
+      stakes: realisticStakes,
+      top_1_share: 0.18,
+      top_5_share: 0.52,
+      gini: 0.42,
+    },
+  ],
+};
 
 function App() {
-  const { isReady, loading, error, run, calculateGiniCoefficient } = useSimulation();
-  const [result, setResult] = useState<SimulationResult | string | null>(null);
+  const [activeSection, setActiveSection] = useState('overview');
+  
+  // For now, use mock data directly
+  // TODO: Wire up to real simulation via WASM
+  const simulationData = mockSimulationData;
 
-  const handleRunSimulation = async () => {
-    const config = {
-      max_ticks: 100000,
-    };
-
-    const simulationResult = await run(config);
-    if (simulationResult) {
-      setResult(simulationResult);
-    }
+  const sectionTitles: Record<string, { title: string; subtitle: string }> = {
+    overview: { 
+      title: 'Overview', 
+      subtitle: `${simulationData.domain} simulation • ${simulationData.total_ticks.toLocaleString()} blocks`
+    },
+    decentralization: { 
+      title: 'Decentralization Metrics', 
+      subtitle: 'Nakamoto coefficients and centralization analysis'
+    },
+    distribution: { 
+      title: 'Stake Distribution', 
+      subtitle: 'Validator stake concentration and Gini coefficient'
+    },
+    survival: { 
+      title: 'Survival Analysis', 
+      subtitle: 'Critical events and protocol health timeline'
+    },
   };
 
-  const handleCalculateGini = () => {
-    const stakes = [1000, 2000, 1500, 3000, 500, 800, 1200];
-    const gini = calculateGiniCoefficient(stakes);
-    
-    if (gini !== null) {
-      setResult({
-        status: 'success',
-        message: `Gini Coefficient: ${gini.toFixed(4)}`,
-        ticks: 0,
-        validators: stakes.length,
-      });
-    }
-  };
+  const { title, subtitle } = sectionTitles[activeSection] || sectionTitles.overview;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-8">
-      <div className="card max-w-4xl w-full animate-fade-in">
-        {/* Header */}
-        <header className="text-center mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent mb-2">
-            Protocol Simulator
-          </h1>
-          <p className="text-gray-600 text-lg">
-            React + TypeScript + Rust WASM
-          </p>
-        </header>
-
-        {/* Status */}
-        <StatusBadge isReady={isReady} />
-
-        {/* Error Display */}
-        {error && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 font-semibold">Error: {error}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Button
-            onClick={handleRunSimulation}
-            disabled={!isReady}
-            loading={loading}
-            variant="primary"
-          >
-            Run Simulation
-          </Button>
-
-          <Button
-            onClick={handleCalculateGini}
-            disabled={!isReady}
-            variant="secondary"
-          >
-            Calculate Gini
-          </Button>
-        </div>
-
-        {/* Results */}
-        {result && (
-          <div className="mt-8">
-            <ResultCard title="Simulation Result" result={result} />
-          </div>
-        )}
-
-        {/* Tech Stack */}
-        <footer className="mt-12 pt-8 border-t border-gray-200">
-          <p className="text-center text-gray-600 font-semibold mb-4">
-            Built with:
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {['React 18', 'TypeScript', 'Rust', 'WASM', 'Vite', 'Tailwind', 'Bun'].map((tech) => (
-              <span
-                key={tech}
-                className="px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-full text-sm font-semibold"
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
-        </footer>
-      </div>
-    </div>
+    <DashboardLayout
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      title={title}
+      subtitle={subtitle}
+    >
+      <ValidatorCharts data={simulationData} section={activeSection} />
+    </DashboardLayout>
   );
 }
 
