@@ -5,7 +5,7 @@ import { ValidatorCharts } from '@/components/domains/validator/ValidatorCharts'
 import type { SimulationOutput } from '@/types/simulation';
 import { useSimulation } from '@/hooks/useWasm';
 import { Loader2, AlertCircle } from 'lucide-react';
-import defaultConfig from '../../configs/wasm_default.json';
+import defaultConfig from '../../configs/example_composite.json';
 
 function App() {
   const [activeSection, setActiveSection] = useState('overview');

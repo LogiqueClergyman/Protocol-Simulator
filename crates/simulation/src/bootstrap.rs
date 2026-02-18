@@ -6,17 +6,22 @@ use crate::domain::validator::metrics::{
     EveryNBlocks, GlobalMetricsCollector, OnEvent, ValidatorListeners,
 };
 use crate::engine::engine::SimulationEngine;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use std::fs;
 use std::sync::{Arc, Mutex};
 
 /// Bootstrap the simulation from a config file
 pub fn bootstrap_from_file(path: &str) -> Result<Box<dyn SimulationRunner>> {
     let raw = fs::read_to_string(path)?;
-    let root_config: RootConfig = serde_json::from_str(&raw)?;
+    bootstrap_from_json(&raw)
+}
+
+/// Bootstrap the simulation from a JSON string
+pub fn bootstrap_from_json(json: &str) -> Result<Box<dyn SimulationRunner>> {
+    let root_config: RootConfig = serde_json::from_str(json)?;
 
     match root_config.domain.as_str() {
-        "validator" => bootstrap_validator(&raw),
+        "validator" => bootstrap_validator(json),
         other => Err(anyhow!("Unknown domain type: {}", other)),
     }
 }

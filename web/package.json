@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pwsh -ExecutionPolicy Bypass -File ../build-wasm.ps1 && vite",
+    "build:wasm": "wasm-pack build ../crates/wasm-bindings --target web --out-dir ../web/src/wasm --out-name wasm_bindings",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

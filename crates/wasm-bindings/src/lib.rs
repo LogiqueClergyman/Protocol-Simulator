@@ -31,6 +31,10 @@ impl SimulationConfig {
     }
 }
 
+use simulation::bootstrap::bootstrap_from_json;
+use simulation::domain::validator::metrics::{global::ValidatorGlobalMetrics, ValidatorListeners};
+use simulation::metrics::recorder::MetricsRecorder;
+
 /// Run a simulation and return results as JSON
 ///
 /// JavaScript usage:
@@ -45,17 +49,42 @@ impl SimulationConfig {
 pub fn run_simulation(config_json: &str) -> Result<String, JsValue> {
     log::info!("Starting simulation from WASM...");
 
-    // For now, return a mock result
-    // We'll integrate the real simulation next
-    let mock_result = serde_json::json!({
-        "status": "success",
-        "message": "Simulation completed!",
-        "ticks": 100000,
-        "validators": 100
-    });
+    let runner = bootstrap_from_json(config_json)
+        .map_err(|e| JsValue::from_str(&format!("Bootstrap failed: {}", e)))?;
 
-    serde_json::to_string(&mock_result)
-        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    let results = runner
+        .run()
+        .map_err(|e| JsValue::from_str(&format!("Simulation failed: {}", e)))?;
+
+    if results.domain == "validator" {
+        let recorder = results
+            .records
+            .downcast_ref::<MetricsRecorder<ValidatorGlobalMetrics>>()
+            .ok_or_else(|| JsValue::from_str("Failed to cast records"))?;
+
+        let listeners = results
+            .listeners
+            .downcast_ref::<ValidatorListeners>()
+            .ok_or_else(|| JsValue::from_str("Failed to cast listeners"))?;
+
+        let output = serde_json::json!({
+            "domain": results.domain,
+            "total_ticks": recorder.records.len(),
+            "stopped_early": false, // TODO: Wiring for early stop detection
+            "stop_reason": serde_json::Value::Null,
+            "global_metrics": recorder.records,
+            "survival_metrics": listeners.survival.outcome,
+            "distribution_snapshots": listeners.distribution.records
+        });
+
+        serde_json::to_string(&output)
+            .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+    } else {
+        Err(JsValue::from_str(&format!(
+            "Unsupported domain: {}",
+            results.domain
+        )))
+    }
 }
 
 /// Example: Simple computation function

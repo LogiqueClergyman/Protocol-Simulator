@@ -37,8 +37,10 @@ pub struct ValidatorConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ValidatorTier {
     /// Range start (inclusive)
+    #[serde(deserialize_with = "deserialize_u64_lossy")]
     pub id_range_start: u64,
     /// Range end (inclusive)
+    #[serde(deserialize_with = "deserialize_u64_lossy")]
     pub id_range_end: u64,
     /// Operating cost per block
     pub operating_cost_per_block: f64,
@@ -61,7 +63,7 @@ impl ValidatorScenarioConfig {
             current_block: 0,
         };
 
-        let validators = (0..self.validators.count)
+        let validators: Vec<Validator> = (0..self.validators.count)
             .map(|id| {
                 // Find the tier for this validator ID
                 let tier = self
@@ -89,4 +91,72 @@ impl ValidatorScenarioConfig {
             initial_validators: validators,
         }
     }
+}
+
+fn deserialize_u64_lossy<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct StringOrNumberVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for StringOrNumberVisitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string or number representing a u64")
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if value >= u64::MIN as i64 {
+                Ok(value as u64)
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "i64 out of boolean range: {}",
+                    value
+                )))
+            }
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(value)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            value.parse::<u64>().map_err(serde::de::Error::custom)
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            value.parse::<u64>().map_err(serde::de::Error::custom)
+        }
+
+        fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            // Allow lossy conversion if it's within representable range or fallback to max
+            // This is risky but matches JS behavior of approximations
+            if value >= u64::MIN as f64 && value <= u64::MAX as f64 {
+                Ok(value as u64)
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "f64 out of u64 range: {}",
+                    value
+                )))
+            }
+        }
+    }
+
+    deserializer.deserialize_any(StringOrNumberVisitor)
 }

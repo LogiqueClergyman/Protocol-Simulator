@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     domain::validator::{metrics::global::ValidatorGlobalMetrics, state::ValidatorWorld},
@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SimulationOutcome {
     pub time_to_first_exit: Option<u64>,
     pub time_to_nc33_breach: Option<u64>,

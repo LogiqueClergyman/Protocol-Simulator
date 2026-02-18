@@ -1,8 +1,9 @@
 use crate::domain::validator::state::ValidatorWorld;
 use crate::metrics::traits::Metrics;
+use serde::Serialize;
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct ValidatorGlobalMetrics {
     pub block: u64,
     pub active_validators: usize,
@@ -11,7 +12,7 @@ pub struct ValidatorGlobalMetrics {
     pub nc50: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct StakeDistributionSnapshot {
     pub block: u64,
     // sorted descending
